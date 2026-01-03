@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#060a11" />
+    <title>Desk Screen — Always-on tablet dashboard</title>
+    <meta
+      name="description"
+      content="Always-on tablet dashboard (calendar month grid, todo, memo, weather). Runs on a Mac as a tiny Python server."
+    />
+
+    <meta property="og:title" content="Desk Screen" />
+    <meta property="og:description" content="Always-on tablet dashboard (calendar / todo / memo / weather)." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="dashboard-kiosk.png" />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="hero">
+        <div class="card">
+          <div class="badge">Desk Screen</div>
+          <h1>Always‑on tablet dashboard</h1>
+          <p class="sub">
+            A lightweight dashboard you keep open on a tablet.
+            Calendar is shown as a month grid with event titles inside each day, plus Todo / Memo / Weather.
+          </p>
+
+          <div class="actions">
+            <a class="btn primary" href="https://github.com/daideguchi/desk-screen" target="_blank" rel="noreferrer">
+              View on GitHub
+            </a>
+            <a class="btn secondary" href="#quickstart">Quick start</a>
+            <a class="btn" href="#demo">Demo mode</a>
+          </div>
+
+          <div class="grid">
+            <div class="feat">
+              <h3><span class="dot"></span>Month grid calendar</h3>
+              <p>Events are visible directly in each day cell. Today is strongly highlighted.</p>
+            </div>
+            <div class="feat">
+              <h3><span class="dot"></span>Holidays</h3>
+              <p>Japanese public holidays are shown in red (e.g. 成人の日).</p>
+            </div>
+            <div class="feat">
+              <h3><span class="dot"></span>Todo (max 5 in kiosk)</h3>
+              <p>Designed to keep items readable and always visible on a wall display.</p>
+            </div>
+            <div class="feat">
+              <h3><span class="dot"></span>Memo</h3>
+              <p>Editable from PC/phone. Kiosk/tablet defaults to view‑only.</p>
+            </div>
+            <div class="feat">
+              <h3><span class="dot"></span>Weather</h3>
+              <p>Displays current weather + temperature (Open‑Meteo).</p>
+            </div>
+            <div class="feat">
+              <h3><span class="dot"></span>No heavy framework</h3>
+              <p>Single Python server file with embedded HTML/JS/CSS.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card heroShot">
+          <div class="shot">
+            <img src="dashboard-kiosk.png" alt="Desk Screen dashboard (kiosk)" />
+          </div>
+          <div class="shotcap">Dashboard (kiosk)</div>
+
+          <div class="shot">
+            <img src="calendar-day.png" alt="Calendar day overlay" />
+          </div>
+          <div class="shotcap">Day overlay (tap a day cell)</div>
+        </div>
+      </div>
+
+      <div class="card section" id="quickstart">
+        <h2>Quick start</h2>
+        <p class="muted">
+          Run the server on a Mac, then open it from a tablet on the same Wi‑Fi. Recommended URL for wall display:
+          <span class="pill">?kiosk=1</span>.
+        </p>
+        <div class="code">
+          <pre><code>git clone https://github.com/daideguchi/desk-screen.git
+cd desk-screen
+cp .env.example .env
+./desk start</code></pre>
+        </div>
+        <p class="muted" style="margin-top:10px">
+          After start, it prints URLs. Open:
+          <code>http://&lt;mac-ip&gt;:&lt;port&gt;/?kiosk=1</code>
+        </p>
+      </div>
+
+      <div class="card section" id="demo">
+        <h2>Demo mode</h2>
+        <p class="muted">
+          For portfolio screenshots, use demo mode to show sample calendar/todo/memo. Demo mode is read‑only.
+        </p>
+        <div class="code">
+          <pre><code>http://&lt;mac-ip&gt;:&lt;port&gt;/?kiosk=1&amp;demo=1</code></pre>
+        </div>
+      </div>
+
+      <div class="card section">
+        <h2>Networking tip</h2>
+        <p class="muted">
+          If Bonjour/mDNS is available on your network, you can access via <code>.local</code> (more stable than IP):
+          <code>http://&lt;LocalHostName&gt;.local:&lt;port&gt;/?kiosk=1</code>
+        </p>
+      </div>
+
+      <div class="card section">
+        <h2>License</h2>
+        <p class="muted">MIT</p>
+      </div>
+
+      <div class="footer">© 2026 daideguchi · Desk Screen</div>
+    </div>
+  </body>
+</html>
+
