@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "service_account_json": "credentials/service_account.json",
+  "calendar_ids": [
+    "your_calendar_id_here"
+  ]
+}

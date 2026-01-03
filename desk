@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+
+# Load local environment (optional).
+# - Keeps secrets/config out of shell profiles
+# - Exported for child processes (python server, setup scripts, etc.)
+env_file="${here}/.env"
+if [[ -f "${env_file}" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "${env_file}"
+  set +a
+fi
+
+cmd="${1:-start}"
+
+python_bin="${DESK_SCREEN_PYTHON:-/usr/bin/python3}"
+log_file="${HOME}/Library/Logs/desk_screen.manual.log"
+
+port_file="${here}/port.txt"
+
+wait_health() {
+  local port="$1"
+  for _ in {1..80}; do
+    if /usr/bin/curl -fsS --connect-timeout 0.5 --max-time 1 "http://127.0.0.1:${port}/healthz" >/dev/null 2>&1; then
+      return 0
+    fi
+    /bin/sleep 0.1
+  done
+  return 1
+}
+
+read_port() {
+  if [[ -f "${port_file}" ]]; then
+    /usr/bin/tr -d ' \n\r\t' < "${port_file}" 2>/dev/null || true
+  fi
+}
+
+is_running() {
+  local port
+  port="$(read_port || true)"
+  if [[ -z "${port}" ]]; then
+    return 1
+  fi
+  wait_health "${port}"
+}
+
+start_server() {
+  if is_running; then
+    "${here}/show_urls.sh"
+    return 0
+  fi
+
+mkdir -p "${HOME}/Library/Logs"
+
+(
+  cd "${here}"
+  nohup "${python_bin}" -u "${here}/server.py" >>"${log_file}" 2>&1 &
+)
+
+local port=""
+for _ in {1..80}; do
+  port="$(read_port || true)"
+  if [[ -n "${port}" ]]; then
+    break
+  fi
+  /bin/sleep 0.1
+done
+
+if [[ -z "${port}" ]]; then
+  echo "failed to start (no port.txt). see: ${log_file}" >&2
+  return 1
+fi
+
+if ! wait_health "${port}"; then
+  echo "failed to start (healthz timeout). see: ${log_file}" >&2
+  return 1
+fi
+
+echo "started (log: ${log_file})"
+  "${here}/show_urls.sh"
+}
+
+case "${cmd}" in
+  start|up|"")
+    start_server
+    ;;
+  oauth)
+    "${python_bin}" "${here}/setup_google_oauth.py" --open
+    ;;
+  calendars|cals)
+    "${python_bin}" "${here}/list_google_calendars_oauth.py"
+    ;;
+  stop|down)
+    "${here}/stop.sh"
+    ;;
+  restart)
+    "${here}/stop.sh" || true
+    start_server
+    ;;
+  status)
+    if is_running; then
+      echo "running"
+      "${here}/show_urls.sh"
+    else
+      echo "stopped"
+    fi
+    ;;
+  urls)
+    "${here}/show_urls.sh"
+    ;;
+  *)
+    echo "usage: $0 [start|stop|restart|status|urls|oauth|calendars]" >&2
+    exit 2
+    ;;
+esac
