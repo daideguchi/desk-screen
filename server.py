@@ -4688,11 +4688,35 @@ def _local_ips() -> list[str]:
     return ips
 
 
+class _ThreadingHTTPServerV6(ThreadingHTTPServer):
+    address_family = socket.AF_INET6
+
+    def server_bind(self) -> None:  # noqa: D401
+        # Bind IPv6-only so we can also keep an IPv4 listener on the same port.
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        except Exception:
+            pass
+        super().server_bind()
+
+
 def main() -> None:
     _acquire_lock_or_exit()
 
     preferred = _parse_port(PORT_ENV) if PORT_ENV else None
     httpd, port = _create_server(HOST, preferred)
+
+    # iOS/Safari sometimes prefers IPv6 (e.g. Bonjour `.local` may resolve to IPv6),
+    # so also listen on IPv6 on the same port when we are bound to all IPv4 interfaces.
+    httpd6: Optional[ThreadingHTTPServer] = None
+    if HOST == "0.0.0.0":
+        try:
+            httpd6 = _ThreadingHTTPServerV6(("::", port), Handler)
+        except OSError:
+            httpd6 = None
+        except Exception:
+            httpd6 = None
+
     _write_port_file(port)
 
     urls = [f"http://{ip}:{port}/" for ip in _local_ips()] or [f"http://127.0.0.1:{port}/"]
@@ -4700,6 +4724,10 @@ def main() -> None:
     for u in urls:
         print(f"  {u}")
         print(f"  {u}timer")
+
+    if httpd6 is not None:
+        t = threading.Thread(target=httpd6.serve_forever, daemon=True)
+        t.start()
     httpd.serve_forever()
 
 
