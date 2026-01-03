@@ -1,4 +1,8 @@
-# Desk Screen（dタブレット常時表示）
+# Desk Screen（タブレット常時表示ダッシュボード）
+
+Always-on tablet dashboard (Calendar / Todo / Memo / Weather).
+
+![Dashboard (kiosk)](docs/dashboard-kiosk.png)
 
 Mac側で軽量HTTPサーバを動かし、dタブレットはブラウザで開きっぱなしにする構成です。
 
@@ -7,6 +11,18 @@ Mac側で軽量HTTPサーバを動かし、dタブレットはブラウザで開
 - `/` … 日時/天気 + カレンダー（月表示: 予定をマス内に表示 / 祝日は赤）+ ToDo（Local or Google Tasks）+ メモ
 - `/timer` … 大時計 + ポモドーロ（25/5・50/10）
   - タブレット（タッチ端末）ではメモはデフォルト閲覧専用（入力しない想定）
+
+## Screenshots
+
+![Calendar day overlay](docs/calendar-day.png)
+![Timer](docs/timer.png)
+
+## Demo mode（サンプル表示）
+
+予定/ToDo/メモを **サンプル表示** にしたい場合（ポートフォリオ用スクショ等）:
+
+- `/?demo=1`
+- `/?kiosk=1&demo=1`
 
 ## 起動（1コマンド）
 

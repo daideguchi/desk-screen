@@ -1518,6 +1518,148 @@ def build_payload() -> dict:
     }
 
 
+def _demo_month_days(year: int, month: int) -> int:
+    try:
+        if month == 12:
+            nm = datetime.datetime(year + 1, 1, 1)
+        else:
+            nm = datetime.datetime(year, month + 1, 1)
+        thism = datetime.datetime(year, month, 1)
+        return int((nm - thism).days)
+    except Exception:
+        return 30
+
+
+def _demo_local_epoch(dt: datetime.datetime) -> int:
+    # `time.mktime` interprets tuple as local time (good for this app's display).
+    try:
+        return int(time.mktime(dt.timetuple()))
+    except Exception:
+        try:
+            return int(dt.timestamp())
+        except Exception:
+            return int(time.time())
+
+
+def build_demo_payload() -> dict:
+    now = int(time.time())
+    now_dt = datetime.datetime.fromtimestamp(now).replace(second=0, microsecond=0)
+    year, month, day = now_dt.year, now_dt.month, now_dt.day
+    dim = _demo_month_days(year, month)
+
+    def clamp_day(d: int) -> int:
+        if d < 1:
+            return 1
+        if d > dim:
+            return dim
+        return d
+
+    events: list[dict] = []
+
+    def add_timed(d: int, hh: int, mm: int, dur_min: int, title: str, location: str = "") -> None:
+        start_dt = datetime.datetime(year, month, clamp_day(d), hh, mm)
+        end_dt = start_dt + datetime.timedelta(minutes=int(dur_min))
+        start_epoch = _demo_local_epoch(start_dt)
+        end_epoch = _demo_local_epoch(end_dt)
+        events.append(
+            {
+                "date": fmt_md(start_epoch),
+                "date_epoch": _day_start_epoch(start_epoch),
+                "start_epoch": start_epoch,
+                "end_epoch": end_epoch,
+                "all_day": False,
+                "start": fmt_hm(start_epoch),
+                "end": fmt_hm(end_epoch),
+                "title": title,
+                "location": location,
+            }
+        )
+
+    def add_allday(d: int, title: str) -> None:
+        start_dt = datetime.datetime(year, month, clamp_day(d), 0, 0)
+        start_epoch = _demo_local_epoch(start_dt)
+        end_epoch = start_epoch + 86400
+        events.append(
+            {
+                "date": fmt_md(start_epoch),
+                "date_epoch": _day_start_epoch(start_epoch),
+                "start_epoch": start_epoch,
+                "end_epoch": end_epoch,
+                "all_day": True,
+                "start": "終日",
+                "end": "",
+                "title": title,
+                "location": "",
+            }
+        )
+
+    # Ensure at least one "next" event exists in the current month.
+    next_hour = (now_dt + datetime.timedelta(hours=1)).replace(minute=0)
+    if next_hour.month != month or next_hour.year != year:
+        next_hour = datetime.datetime(year, month, clamp_day(day), 20, 0)
+    add_timed(next_hour.day, next_hour.hour, next_hour.minute, 45, "デモ：次の予定", "オンライン")
+
+    # A few nice-looking sample events across the month.
+    add_timed(clamp_day(day + 1), 10, 0, 30, "チーム定例", "Zoom")
+    add_timed(clamp_day(day + 1), 13, 0, 60, "デザインレビュー", "会議室A")
+    add_allday(clamp_day(day + 3), "集中作業（終日）")
+    add_timed(clamp_day(day + 4), 19, 0, 60, "運動", "")
+
+    # Fixed anchors (safe within month) so the month grid looks populated.
+    add_timed(5, 9, 30, 20, "朝会", "")
+    add_timed(12, 15, 0, 60, "振り返り", "")
+    add_allday(20, "締切")
+    add_timed(26, 11, 0, 30, "1on1", "")
+
+    # Demo tasks (Google tab) + Local todo (Local tab).
+    def due_epoch(days_ahead: int, hh: int, mm: int) -> int:
+        dt = (now_dt + datetime.timedelta(days=int(days_ahead))).replace(hour=hh, minute=mm)
+        return _demo_local_epoch(dt)
+
+    gtasks = [
+        {"id": "demo-1", "title": "提案資料のたたき台", "notes": "", "due_date": fmt_md(due_epoch(1, 18, 0)), "due_time": "18:00"},
+        {"id": "demo-2", "title": "来週の予定調整", "notes": "", "due_date": fmt_md(due_epoch(2, 12, 0)), "due_time": "12:00"},
+        {"id": "demo-3", "title": "買い出しリスト更新", "notes": "", "due_date": fmt_md(due_epoch(3, 9, 0)), "due_time": "09:00"},
+        {"id": "demo-4", "title": "請求書チェック", "notes": "", "due_date": fmt_md(due_epoch(4, 17, 0)), "due_time": "17:00"},
+        {"id": "demo-5", "title": "週次レビュー", "notes": "", "due_date": fmt_md(due_epoch(5, 10, 0)), "due_time": "10:00"},
+    ]
+
+    weather_name = (
+        (os.environ.get("DESK_SCREEN_WEATHER_LABEL") or "")
+        or (os.environ.get("DESK_SCREEN_WEATHER_CITY") or "")
+        or "福岡市 中央区"
+    ).strip() or "福岡市 中央区"
+
+    weather = {
+        "enabled": True,
+        "ok": True,
+        "name": weather_name,
+        "temp_c": 12.3,
+        "temp_c_int": 12,
+        "code": 2,
+        "text": "くもり",
+        "obs_time": now_dt.isoformat(),
+        "updated": now,
+    }
+
+    return {
+        "now": now,
+        "ui_rev": UI_REV,
+        "weather": weather,
+        "weather_error": "",
+        "todo": ["デモ：ゴミ出し", "デモ：水やり", "デモ：メール返信", "デモ：ストレッチ", "デモ：読書"],
+        "gtasks": gtasks,
+        "events": events,
+        "calendar_days": calendar_lookahead_days(),
+        "calendar_mode": "demo",
+        "calendar_ids_count": 0,
+        "calendar_source": "demo",
+        "calendar_error": "",
+        "gtasks_error": "",
+        "todo_token_required": False,
+    }
+
+
 INDEX_HTML = f"""<!doctype html>
 <html lang="ja">
 <head>
@@ -2320,6 +2462,21 @@ function getToken(){{
     if (history && history.replaceState) history.replaceState(null, '', location.pathname);
   }}
 }})();
+
+function _truthy(v){{
+  v = (v || '').toString().trim().toLowerCase();
+  return (v === '1' || v === 'true' || v === 'yes' || v === 'on');
+}}
+var demoMode = false;
+try{{
+  demoMode = _truthy(qparam('demo'));
+  if (demoMode) document.body.classList.add('demo');
+}}catch(e){{ demoMode = false; }}
+function withDemoUrl(url){{
+  if (!demoMode) return url;
+  try{{ if ((url || '').indexOf('demo=') >= 0) return url; }}catch(e){{}}
+  return url + ((url || '').indexOf('?') >= 0 ? '&' : '?') + 'demo=1';
+}}
 
 // toast (no dialogs: fullscreen-friendly)
 var toastTimer = 0;
@@ -3555,6 +3712,7 @@ function renderNextText(data){{
   if (st){{
     var msg = '更新: ' + new Date().toLocaleTimeString() + ' / ' + location.host;
 	    try{{ if (lastData && lastData.ui_rev) msg += ' / rev:' + String(lastData.ui_rev).slice(-4); }}catch(e){{}}
+	    try{{ if (demoMode) msg += ' / DEMO'; }}catch(e0){{}}
 	    if (lastData.calendar_error) msg += ' / CAL: ' + shortErr(lastData.calendar_error);
 	    if (lastData.gtasks_error) msg += ' / TODO: ' + shortErr(lastData.gtasks_error);
 	    st.textContent = msg;
@@ -3592,8 +3750,15 @@ function _xhrJson(method, url, obj, cb){{
 }}
 
 function _okStatus(status){{ return status >= 200 && status < 300; }}
-function getJson(url, cb){{ _xhrJson('GET', url, null, cb); }}
-function postJson(path, obj, cb){{ _xhrJson('POST', path, obj, cb); }}
+function getJson(url, cb){{ _xhrJson('GET', withDemoUrl(url), null, cb); }}
+function postJson(path, obj, cb){{
+  if (demoMode){{
+    try{{ showToast('DEMO: 書き込みは無効です', '', null, 1800); }}catch(e){{}}
+    try{{ cb(403, {{ ok:false, error:'demo mode' }}); }}catch(e2){{}}
+    return;
+  }}
+  _xhrJson('POST', path, obj, cb);
+}}
 
 function refresh(){{
   getJson('/data.json?_=' + nowMs(), function(status, data){{
@@ -4247,6 +4412,16 @@ setInterval(step, 250);
 
 
 class Handler(BaseHTTPRequestHandler):
+    def _is_demo(self) -> bool:
+        if _env_bool("DESK_SCREEN_DEMO", False):
+            return True
+        try:
+            qs = urllib.parse.parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            v = (qs.get("demo") or [""])[0]
+            return str(v).strip().lower() in ("1", "true", "yes", "on")
+        except Exception:
+            return False
+
     def log_message(self, format: str, *args) -> None:  # noqa: A002
         # Keep stdout/stderr quiet (useful for launchd).
         return
@@ -4303,6 +4478,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
+        demo = self._is_demo()
 
         if path in ("/", "/index.html"):
             self._send(INDEX_HTML.encode("utf-8"))
@@ -4313,7 +4489,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/data.json":
-            payload = build_payload()
+            payload = build_demo_payload() if demo else build_payload()
             self._send(
                 json.dumps(payload, ensure_ascii=False).encode("utf-8"),
                 "application/json; charset=utf-8",
@@ -4321,14 +4497,23 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/status.json":
-            weather, weather_err = read_weather_cached()
+            if demo:
+                p = build_demo_payload()
+                weather = dict(p.get("weather") or {})
+                weather_err = str(p.get("weather_error") or "")
+            else:
+                weather, weather_err = read_weather_cached()
             self._send_json(
                 {"ok": True, "now": int(time.time()), "ui_rev": UI_REV, "weather": weather, "weather_error": weather_err}
             )
             return
 
         if path == "/memo.json":
-            text, mtime = memo_read()
+            if demo:
+                text = "【DEMO】\n・このメモはサンプル表示です\n・kiosk では閲覧のみ\n・PC/スマホから編集できます\n"
+                mtime = int(time.time())
+            else:
+                text, mtime = memo_read()
             self._send_json({"ok": True, "memo": text, "mtime": mtime})
             return
 
@@ -4340,6 +4525,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
+        if self._is_demo():
+            self._send_json({"ok": False, "error": "demo mode (read-only)"}, 403)
+            return
 
         if path == "/todo/add":
             ok, msg = _todo_check_auth(self.headers.get("X-Desk-Token", ""))
