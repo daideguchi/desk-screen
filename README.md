@@ -152,7 +152,7 @@ python3 setup_google_oauth.py --from <YOUR_OAUTH_JSON_PATH> --open
 
 そのプロジェクトに権限が無い/触れない場合は、**自分が権限を持つGCPプロジェクト**を Quota Project に指定して回避できます。
 
-1) Quota Projectを決める（例: `youtube-publisher-479408` など）
+1) Quota Projectを決める（例: `my-quota-project-123` など）
 2) そのプロジェクトでAPIを有効化:
 
 ```bash
