@@ -1852,8 +1852,22 @@ INDEX_HTML = f"""<!doctype html>
 		    box-shadow: 0 10px 22px rgba(0,0,0,.22);
 		    font-size:16px;
 		  }}
-		  .card.todo .text .t {{ font-weight:900; font-size:16px; }}
-		  .card.todo .text .s {{ font-size:13px; opacity:.92; }}
+		  .card.todo .text .t {{
+		    font-weight:900;
+		    font-size:16px;
+		    line-height:1.15;
+		    display:block;
+		    white-space:nowrap;
+		    overflow:hidden;
+		    text-overflow:ellipsis;
+		  }}
+		  .card.todo .text .s {{
+		    font-size:13px;
+		    opacity:.92;
+		    white-space:nowrap;
+		    overflow:hidden;
+		    text-overflow:ellipsis;
+		  }}
 		  .card.memo {{ flex: 0.65; }}
 		  .card.cal {{ flex: 1.7; }}
 		  .head {{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }}
@@ -1935,25 +1949,25 @@ INDEX_HTML = f"""<!doctype html>
 	    word-break:break-word;
 	  }}
 	  .memoView::-webkit-scrollbar {{ width:0; height:0; }}
-  .hint {{ margin-top:8px; }}
-  .list {{ flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; }}
-  .list::-webkit-scrollbar {{ width:0; height:0; }}
-	  body.kiosk #events.list {{ overflow:hidden; }}
-	  body.kiosk .ev .loc {{ display:none; }}
-	  body.kiosk #todoAddRow {{ display:none; }}
-	  body.kiosk #todoQuickRow {{ display:none; }}
-	  body.kiosk #memoEditRow {{ display:none; }}
-	  body.kiosk #memoInput {{ display:none; }}
-	  body.kiosk #nextEvents {{ display:none; }}
-	  body.kiosk .card.todo {{ flex: 1.4; }}
-	  body.kiosk .card.memo {{ flex: 0.45; }}
-	  body.kiosk .card.todo .tabs {{ display:none; }}
-	  body.kiosk .card.todo .head {{ margin-bottom:6px; }}
-	  body.kiosk .card.todo #todoHint {{ display:none; }}
-	  body.kiosk .card.todo .item {{ margin:4px 0; padding:6px 10px; align-items:center; }}
-	  body.kiosk .card.todo .chk {{ width:32px; height:32px; border-radius:12px; font-size:15px; }}
-	  body.kiosk .card.todo .text .t {{
-	    font-size:15px;
+	  .hint {{ margin-top:8px; }}
+	  .list {{ flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; }}
+	  .list::-webkit-scrollbar {{ width:0; height:0; }}
+		  body.kiosk #events.list {{ overflow:hidden; }}
+		  body.kiosk .ev .loc {{ display:none; }}
+		  body.kioskLock #todoAddRow {{ display:none; }}
+		  body.kioskLock #todoQuickRow {{ display:none; }}
+		  body.kioskLock #memoEditRow {{ display:none; }}
+		  body.kioskLock #memoInput {{ display:none; }}
+		  body.kiosk #nextEvents {{ display:none; }}
+		  body.kiosk .card.todo {{ flex: 1.4; }}
+		  body.kiosk .card.memo {{ flex: 0.45; }}
+		  body.kioskLock .card.todo .tabs {{ display:none; }}
+		  body.kiosk .card.todo .head {{ margin-bottom:6px; }}
+		  body.kioskLock .card.todo #todoHint {{ display:none; }}
+		  body.kiosk .card.todo .item {{ margin:4px 0; padding:6px 10px; align-items:center; }}
+		  body.kiosk .card.todo .chk {{ width:32px; height:32px; border-radius:12px; font-size:15px; }}
+		  body.kiosk .card.todo .text .t {{
+		    font-size:15px;
 	    line-height:1.12;
 	    white-space:nowrap;
 	    overflow:hidden;
@@ -2528,31 +2542,47 @@ function isStandalone(){{
   }}catch(e){{}}
   return false;
 }}
-function isTouchDevice(){{
-  return ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-}}
-function getKioskMode(){{
-  var v = '';
-  try{{ v = (qparam('kiosk') || '').toString().toLowerCase(); }}catch(e){{ v = ''; }}
-  if (v === '1' || v === 'on' || v === 'true') return true;
-  if (v === '0' || v === 'off' || v === 'false') return false;
-  // Default heuristics: tablets => kiosk, phones => normal.
-  if (!isTouchDevice()) return false;
-  var w = 0, h = 0;
-  try{{ w = parseInt(window.innerWidth || '0', 10) || 0; }}catch(e2){{ w = 0; }}
-  try{{ h = parseInt(window.innerHeight || '0', 10) || 0; }}catch(e3){{ h = 0; }}
-  var m = Math.min(w || 0, h || 0);
-  return m >= 520;
-}}
-var kioskMode = false;
-try{{
-  kioskMode = getKioskMode();
-  if (kioskMode) document.body.classList.add('kiosk');
-}}catch(e){{}}
-function getFsPref(){{
-  var v = '';
-  try{{ v = localStorage.getItem('desk_fs_pref') || ''; }}catch(e){{}}
-  if (!v){{
+	function isTouchDevice(){{
+	  return ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+	}}
+	function getMinSide(){{
+	  var w = 0, h = 0;
+	  try{{ w = parseInt(window.innerWidth || '0', 10) || 0; }}catch(e2){{ w = 0; }}
+	  try{{ h = parseInt(window.innerHeight || '0', 10) || 0; }}catch(e3){{ h = 0; }}
+	  return Math.min(w || 0, h || 0);
+	}}
+	function getKioskMode(){{
+	  var v = '';
+	  try{{ v = (qparam('kiosk') || '').toString().toLowerCase(); }}catch(e){{ v = ''; }}
+	  if (v === '1' || v === 'on' || v === 'true') return true;
+	  if (v === '0' || v === 'off' || v === 'false') return false;
+	  // Default heuristics: tablets => kiosk, phones => normal.
+	  if (!isTouchDevice()) return false;
+	  return getMinSide() >= 520;
+	}}
+	function getKioskLock(){{
+	  // Read-only lock for the always-on display.
+	  var v = '';
+	  try{{ v = (qparam('lock') || '').toString().toLowerCase(); }}catch(e){{ v = ''; }}
+	  if (v === '1' || v === 'on' || v === 'true') return true;
+	  if (v === '0' || v === 'off' || v === 'false') return false;
+	  // Allow explicit edits even on tablets (rare).
+	  try{{ if (_truthy(qparam('edit'))) return false; }}catch(e2){{}}
+	  if (!isTouchDevice()) return false;
+	  return getMinSide() >= 520;
+	}}
+	var kioskMode = false;
+	var kioskLock = false;
+	try{{
+	  kioskMode = getKioskMode();
+	  kioskLock = getKioskLock();
+	  if (kioskMode) document.body.classList.add('kiosk');
+	  if (kioskLock) document.body.classList.add('kioskLock');
+	}}catch(e){{}}
+	function getFsPref(){{
+	  var v = '';
+	  try{{ v = localStorage.getItem('desk_fs_pref') || ''; }}catch(e){{}}
+	  if (!v){{
     v = isTouchDevice() ? '1' : '0';
     try{{ localStorage.setItem('desk_fs_pref', v); }}catch(e){{}}
   }}
@@ -3856,20 +3886,20 @@ var memoLastText = '';
 var memoEditing = false;
 function memoSetMsg(t){{ var el = document.getElementById('memoMsg'); if (el) el.textContent = t || ''; }}
 function memoSetHint(t){{ var el = document.getElementById('memoHint'); if (el) el.textContent = t || ''; }}
-function memoSyncUi(){{
-  var row = document.getElementById('memoEditRow');
-  var ta = document.getElementById('memoInput');
-  var view = document.getElementById('memoView');
-  var bEdit = document.getElementById('memoEditBtn');
-  var bSave = document.getElementById('memoSaveBtn');
-  var bCancel = document.getElementById('memoCancelBtn');
+	function memoSyncUi(){{
+	  var row = document.getElementById('memoEditRow');
+	  var ta = document.getElementById('memoInput');
+	  var view = document.getElementById('memoView');
+	  var bEdit = document.getElementById('memoEditBtn');
+	  var bSave = document.getElementById('memoSaveBtn');
+	  var bCancel = document.getElementById('memoCancelBtn');
 
-  if (typeof kioskMode !== 'undefined' && kioskMode) {{
-    memoEditing = false;
-    if (row) row.style.display = 'none';
-    if (ta) ta.style.display = 'none';
-    if (view) view.style.display = 'block';
-    return;
+	  if (typeof kioskLock !== 'undefined' && kioskLock) {{
+	    memoEditing = false;
+	    if (row) row.style.display = 'none';
+	    if (ta) ta.style.display = 'none';
+	    if (view) view.style.display = 'block';
+	    return;
   }}
 
   if (row) row.style.display = '';
@@ -3888,26 +3918,26 @@ function memoSyncUi(){{
     if (bCancel) bCancel.style.display = 'none';
     memoSetHint('');
   }}
-}}
-function memoStartEdit(){{
-  if (typeof kioskMode !== 'undefined' && kioskMode) return;
-  memoEditing = true;
-  var ta = document.getElementById('memoInput');
-  if (ta) ta.value = memoLastText || '';
-  memoSyncUi();
-  try{{ if (ta) {{ ta.focus(); ta.selectionStart = ta.value.length; ta.selectionEnd = ta.value.length; }} }}catch(e){{}}
-}}
+	}}
+	function memoStartEdit(){{
+	  if (typeof kioskLock !== 'undefined' && kioskLock) return;
+	  memoEditing = true;
+	  var ta = document.getElementById('memoInput');
+	  if (ta) ta.value = memoLastText || '';
+	  memoSyncUi();
+	  try{{ if (ta) {{ ta.focus(); ta.selectionStart = ta.value.length; ta.selectionEnd = ta.value.length; }} }}catch(e){{}}
+	}}
 function memoCancel(){{
   memoEditing = false;
   memoSyncUi();
-}}
-function memoSave(){{
-  if (typeof kioskMode !== 'undefined' && kioskMode) return;
-  var ta = document.getElementById('memoInput');
-  var text = ta ? (ta.value || '') : '';
-  memoSetMsg('保存中...');
-  postJson('/memo/set', {{ text: text }}, function(status, out){{
-    if (!_okStatus(status) || !out || !out.ok) {{
+	}}
+	function memoSave(){{
+	  if (typeof kioskLock !== 'undefined' && kioskLock) return;
+	  var ta = document.getElementById('memoInput');
+	  var text = ta ? (ta.value || '') : '';
+	  memoSetMsg('保存中...');
+	  postJson('/memo/set', {{ text: text }}, function(status, out){{
+	    if (!_okStatus(status) || !out || !out.ok) {{
       memoSetMsg((out && out.error) ? out.error : ('エラー ' + status));
       showToast('メモ保存失敗', '', null, 2000);
       return;
